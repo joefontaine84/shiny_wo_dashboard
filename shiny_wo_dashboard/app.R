@@ -1,11 +1,4 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    https://shiny.posit.co/
-#
+# Libraries --------------------------------------------------------------------
 
 library(shiny)
 library(bslib)
@@ -18,29 +11,25 @@ library(shinyjs)
 library(shinydashboard)
 library(ggplot2)
 
-# test dataframe --------------------------------------------------------------
-# df <- data.frame(
-#   
-#   date = as.Date(c("2000-01-01", "2000-01-02", "2000-01-03")),
-#   pushups = rep(0, times=3)
-#   
-# )
 
 # Connect to Google Sheet Database ---------------------------------------------
 
+# the R script that connects to the database
 source(file="db_connection.R")
 
-# load in data
+# load in data using the function derived from the source file above
 df <- get_data()
 
-df <- df %>% # rowwise() needed, otherwise the "id" includes all dates
+# create a df that includes html buttons for editing and deleting information. 
+df <- df %>% 
+  # rowwise() needed, otherwise the "id" includes all dates
   rowwise() %>%
   
   mutate(buttons = paste0(as.character(tags$button(type="button", id=paste0("edit_", date), class="action-button shiny-bound-input", onclick="get_id(this.id)", style="border: none; background: none;", fa("pencil", fill="yellow3", stroke=NULL))))) %>%
   
   mutate(buttons = paste0(buttons, as.character(tags$button(type="button", id=paste0("delete_", date), class="action-button shiny-bound-input", onclick="get_id(this.id)", style="border: none; background: none;", fa("trash", fill="red", stroke=NULL)))))
 
-
+# a function needed to verticalize data for analysis
 verticalize <- function(df, col_names, dates) {
   
   df <- df %>%
@@ -215,7 +204,8 @@ server <- function(input, output) {
 
   })
   
-  
+  # create valueBoxOutputs dynamically based on what activities and date ranges
+  # are selected
   output$value_boxes <- renderUI({
     
     req(selected_activities())
@@ -232,7 +222,7 @@ server <- function(input, output) {
     
   })
 
-  
+  # create a filtered dataframe that reacts to the dates selected by the user
   filtered_df <- reactive({
     
     dates <- dates()
@@ -246,6 +236,7 @@ server <- function(input, output) {
     
   })
   
+  # populate the dynamically created valueBox's with values
   output$pushups_vbox <- renderValueBox({value=valueBox(round(mean(filtered_df()$pushups), digits=2), "Average Pushups Per Day", icon=icon("heartbeat"), color="red")})
   output$squats_vbox <- renderValueBox({value=valueBox(round(mean(filtered_df()$situps), digits=2), "Average Situps Per Day", icon=icon("heartbeat"), color="red")})
   output$situps_vbox <- renderValueBox({value=valueBox(round(mean(filtered_df()$squats), digits=2), "Average Squats Per Day", icon=icon("heartbeat"), color="red")})
