@@ -69,7 +69,7 @@ ui <- dashboardPage(
               width=12
             
             ),
-
+ 
           ),   
         
           actionButton("add_data", "Add Data", icon=icon("plus"), style="background-color: lightgreen; border-color: black; font-size: 16px;")
