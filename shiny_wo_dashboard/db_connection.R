@@ -6,6 +6,7 @@ library(gargle)
 library(jsonlite)
 
 
+sheet <- "https://docs.google.com/spreadsheets/d/1N3VfTiKHuZOXs0Df0ya1YPU7ZQqCuWfgboJkYTOLRLM/edit?gid=0#gid=0"
 
 get_data <- function(){
   
@@ -15,12 +16,14 @@ get_data <- function(){
   service_account_path <- "workout.json"
   gs4_auth(path = service_account_path)
   
-  sheet <- "https://docs.google.com/spreadsheets/d/1N3VfTiKHuZOXs0Df0ya1YPU7ZQqCuWfgboJkYTOLRLM/edit?gid=0#gid=0"
-  
   df <- googlesheets4::read_sheet(sheet, col_types = "Dnnnnnncc")
   
   return(df)
   
 }
 
+test <- mtcars
+other <- mtcars[1:5]
+other <- other %>% mutate(mpg = 1000)
 
+test2 <- rows_update(test, other)
