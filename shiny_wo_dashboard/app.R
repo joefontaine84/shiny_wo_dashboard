@@ -11,6 +11,11 @@ library(shinyjs)
 library(shinydashboard)
 library(ggplot2)
 library(googlesheets4)
+library(log4r)
+
+# Set up Logger ---------------------------------------------------------------
+
+logger <- log4r::logger(appenders = list(console_appender(), file_appender("debug.log")))
 
 
 # Connect to Google Sheet Database ---------------------------------------------
@@ -22,13 +27,23 @@ source(file="db_connection.R")
 df <- get_data()
 
 # create a df that includes html buttons for editing and deleting information. 
-df <- df %>% 
-  # rowwise() needed, otherwise the "id" includes all dates
-  rowwise() %>%
+
+add_buttons <- function(df) {
   
-  mutate(buttons = paste0(as.character(tags$button(type="button", id=paste0("edit_", date), class="action-button shiny-bound-input", onclick="get_id(this.id)", style="border: none; background: none;", fa("pencil", fill="yellow3", stroke=NULL))))) %>%
+  df <- df %>% 
+    # rowwise() needed, otherwise the "id" includes all dates
+    rowwise() %>%
+    
+    mutate(buttons = paste0(as.character(tags$button(type="button", id=paste0("edit_", date), class="action-button shiny-bound-input", onclick="get_id(this.id)", style="border: none; background: none;", fa("pencil", fill="yellow3", stroke=NULL))))) %>%
+    
+    mutate(buttons = paste0(buttons, as.character(tags$button(type="button", id=paste0("delete_", date), class="action-button shiny-bound-input", onclick="get_id(this.id)", style="border: none; background: none;", fa("trash", fill="red", stroke=NULL)))))
   
-  mutate(buttons = paste0(buttons, as.character(tags$button(type="button", id=paste0("delete_", date), class="action-button shiny-bound-input", onclick="get_id(this.id)", style="border: none; background: none;", fa("trash", fill="red", stroke=NULL)))))
+  return(df)
+                                                                
+}
+
+df <- add_buttons(df)
+
 
 # a function needed to verticalize data for analysis
 verticalize <- function(df, col_names, dates) {
@@ -118,7 +133,9 @@ ui <- page_navbar(
 # Server -----------------------------------------------------------------------
 
 server <- function(input, output) {
-
+    
+    proxy <- DT::dataTableProxy("table")
+  
     output$table <- renderDT({datatable(df,
                               escape = FALSE,
                               editable = TRUE,
@@ -201,22 +218,37 @@ server <- function(input, output) {
       title = "Confirmation",
       strong("Are you sure you would to edit this data?"),
       footer = tagList(actionButton("confirm_edit", "Confirm"),
-                       modalButton("Cancel"))))
+                       modalButton("Cancel"))))})
     
-    observeEvent(input$confirm_edit, {
-      
-      # write to googlesheet
-      # update dataframe in rshiny
-      # df <- df %>%
-      #   mutate()
-      # 
-      # 
-      # googlesheets4::sheet_write(df, ss=sheet)
-      
-      
-    })
-  
+  observeEvent(input$confirm_edit, {
     
+    info(logger, "confirm_edit has worked")
+    #write to googlesheet
+    #update dataframe in rshiny
+    
+    
+    df <- df %>% 
+      filter(date != as.Date(input$edit_date)) %>%
+      select(-buttons)
+    
+    info(logger, "filter & select has worked")
+    
+    df <- df %>% add_row(date = as.Date(input$edit_date), pushups = input$edit_pushups, 
+                         situps = input$edit_situps, squats = input$edit_squats, 
+                         run_mi = input$edit_run, walk_mi = input$edit_walk, 
+                         bike_mi = input$edit_bike, other = input$edit_other, 
+                         comments = input$edit_comments)
+
+    info(logger, "adding row has worked")
+    
+    googlesheets4::sheet_write(df, ss=sheet, "workout")
+    
+    df <- add_buttons(df)
+    
+    DT::replaceData(proxy, df)
+    removeModal()
+    
+
   })
 
 

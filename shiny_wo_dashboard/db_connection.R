@@ -22,8 +22,3 @@ get_data <- function(){
   
 }
 
-test <- mtcars
-other <- mtcars[1:5]
-other <- other %>% mutate(mpg = 1000)
-
-test2 <- rows_update(test, other)
